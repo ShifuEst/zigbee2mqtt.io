@@ -1,0 +1,40 @@
+name: Build MD-GATE-ZB1 LOW firmware
+on:
+  push:
+    branches: [md-gate-firmware]
+    paths:
+      - MD_GATE_ZB1.ino
+      - RelayLevels.h
+      - build-release.py
+      - release-template.zip
+      - .github/workflows/md-gate-firmware.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: arduino/setup-arduino-cli@v2
+      - name: Install pinned ESP32 core
+        run: |
+          arduino-cli config init
+          arduino-cli config add board_manager.additional_urls https://espressif.github.io/arduino-esp32/package_esp32_index.json
+          arduino-cli core update-index
+          arduino-cli core install esp32:esp32@3.3.12
+      - name: Compile LOW firmware
+        run: |
+          mkdir -p sketch/MD_GATE_ZB1
+          cp MD_GATE_ZB1.ino RelayLevels.h sketch/MD_GATE_ZB1/
+          arduino-cli compile --jobs 2 --fqbn 'esp32:esp32:esp32h2:CDCOnBoot=cdc,PartitionScheme=zigbee_zczr,ZigbeeMode=zczr,FlashSize=4M,FlashMode=dio,DebugLevel=none' --build-property 'compiler.cpp.extra_flags=-DMD_RELAY_ACTIVE_HIGH=0' --output-dir build sketch/MD_GATE_ZB1
+      - name: Package and validate
+        run: |
+          python3 build-release.py
+          python3 release/flash.py --check-only
+      - uses: actions/upload-artifact@v4
+        with:
+          name: MD-GATE-ZB1-1.7.0-rc2-LOW
+          path: MD-GATE-ZB1-1.7.0-rc2-LOW.zip
+          if-no-files-found: error
