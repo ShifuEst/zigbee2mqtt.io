@@ -1,0 +1,23 @@
+name: Check Windows H2 flasher
+on:
+    push:
+        branches: [codex/md-gate-h2-txrx01]
+        paths: ['firmware-tools/**', '.github/workflows/md-gate-tools.yml']
+permissions:
+    contents: read
+jobs:
+    windows:
+        runs-on: windows-2022
+        timeout-minutes: 15
+        steps:
+            - uses: actions/checkout@v4
+            - name: Test without hardware
+              shell: powershell
+              run: ./firmware-tools/test-flasher.ps1
+            - uses: actions/upload-artifact@v4
+              if: always()
+              with:
+                  name: Windows-flasher-test
+                  path: |
+                      firmware-tools/logs/
+                      firmware-tools/virtual-*.json
