@@ -1,30 +1,51 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 const path = new URL('../zigbee2mqtt/md-gate-zb1.mjs', import.meta.url);
-let code=fs.readFileSync(path,'utf8');
+let code = fs.readFileSync(path, 'utf8');
 // Stub only exposes builder: the converter's actual command/state functions are executed.
-const stub=`const exposes={access:{SET:2,STATE_GET:5,ALL:7},presets:new Proxy({}, {get:()=> (...args)=>new Proxy({args},{get:(o,k)=>k==='args'?o.args:()=>o})})};`;
-code=code.replace("import * as exposes from 'zigbee-herdsman-converters/lib/exposes';",stub);
-const def=(await import('data:text/javascript;base64,'+Buffer.from(code).toString('base64'))).default;
-const commands=[],reads=[];
-const device={meta:{},save:async()=>{},getEndpoint:id=>({ID:id,command:async(...v)=>commands.push([id,...v]),read:async(...v)=>{reads.push([id,...v]);return {presentValue:id===2};},write:async()=>{}})};
-const meta={device};
-const conv=def.fromZigbee[0].convert;
-const report=(id,v)=>conv(null,{endpoint:{ID:id},data:{presentValue:v}},null,null,meta);
-assert.equal(report(2,true).gate_state,'Teadmata');
-assert.equal(report(3,false).gate_state,'Suletud');
-assert.equal(report(2,false).gate_state,'Vaheasend');
-assert.equal(report(3,true).gate_state,'Avatud');
-assert.equal(report(2,true).gate_state,'Andurite viga');
-assert.equal(report(2,'bad'),undefined);
-const get=k=>def.toZigbee.find(c=>c.key.includes(k));
-await get('pulse').convertSet(null,'pulse','PRESS',meta);
-await get('walk').convertSet(null,'walk','PRESS',meta);
-assert.deepEqual(commands.map(x=>[x[0],x[1],x[2]]),[[1,'genOnOff','on'],[5,'genOnOff','on']]);
-await assert.rejects(()=>get('pulse').convertSet(null,'pulse','ON',meta));
-for(const v of [-1,1001,0.5,NaN,'300']) await assert.rejects(()=>get('pulse_duration').convertSet(null,'pulse_duration',v,meta));
-for(const key of ['closed','open','gate_state']) await get(key).convertGet(null,key,meta);
-assert.equal(commands.length,2,'Sensor reads must not activate relays');
-await get('sensor_mode').convertSet(null,'sensor_mode','Üks andur',meta);
-assert.equal(report(2,false).gate_state,'Avatud');
-console.log('PASS: position truth table, invalid reports, endpoint mapping, command validation, duration bounds, sensor reads without relay commands, single-sensor mode.');
+const stub = `const exposes={access:{SET:2,STATE_GET:5,ALL:7},presets:new Proxy({}, {get:()=> (...args)=>new Proxy({args},{get:(o,k)=>k==='args'?o.args:()=>o})})};`;
+code = code.replace("import * as exposes from 'zigbee-herdsman-converters/lib/exposes';", stub);
+const def = (await import('data:text/javascript;base64,' + Buffer.from(code).toString('base64'))).default;
+const commands = [],
+    reads = [];
+const device = {
+    meta: {},
+    save: async () => {},
+    getEndpoint: (id) => ({
+        ID: id,
+        command: async (...v) => commands.push([id, ...v]),
+        read: async (...v) => {
+            reads.push([id, ...v]);
+            return {presentValue: id === 2};
+        },
+        write: async () => {},
+    }),
+};
+const meta = {device};
+const conv = def.fromZigbee[0].convert;
+const report = (id, v) => conv(null, {endpoint: {ID: id}, data: {presentValue: v}}, null, null, meta);
+assert.equal(report(2, true).gate_state, 'Teadmata');
+assert.equal(report(3, false).gate_state, 'Suletud');
+assert.equal(report(2, false).gate_state, 'Vaheasend');
+assert.equal(report(3, true).gate_state, 'Avatud');
+assert.equal(report(2, true).gate_state, 'Andurite viga');
+assert.equal(report(2, 'bad'), undefined);
+const get = (k) => def.toZigbee.find((c) => c.key.includes(k));
+await get('pulse').convertSet(null, 'pulse', 'PRESS', meta);
+await get('walk').convertSet(null, 'walk', 'PRESS', meta);
+assert.deepEqual(
+    commands.map((x) => [x[0], x[1], x[2]]),
+    [
+        [1, 'genOnOff', 'on'],
+        [5, 'genOnOff', 'on'],
+    ],
+);
+await assert.rejects(() => get('pulse').convertSet(null, 'pulse', 'ON', meta));
+for (const v of [-1, 1001, 0.5, NaN, '300']) await assert.rejects(() => get('pulse_duration').convertSet(null, 'pulse_duration', v, meta));
+for (const key of ['closed', 'open', 'gate_state']) await get(key).convertGet(null, key, meta);
+assert.equal(commands.length, 2, 'Sensor reads must not activate relays');
+await get('sensor_mode').convertSet(null, 'sensor_mode', 'Üks andur', meta);
+assert.equal(report(2, false).gate_state, 'Avatud');
+console.log(
+    'PASS: position truth table, invalid reports, endpoint mapping, command validation, duration bounds, sensor reads without relay commands, single-sensor mode.',
+);
