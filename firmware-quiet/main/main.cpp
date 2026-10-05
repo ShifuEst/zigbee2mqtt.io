@@ -380,7 +380,7 @@ void loop() {
   if (now - lastStatus >= 5000) {
     lastStatus = now;
     Serial.printf("STATUS uptime=%lus joined=%d relay=%d closed=%d open=%d heap=%u reset_reason=%d\n",
-      (unsigned long)(now / 1000), connected, pulseActive, closedContact.stable, openContact.stable, ESP.getFreeHeap(), (int)esp_reset_reason());
+      (unsigned long)(now / 1000), connected, pulseActive, closedContact.stable, openContact.stable, static_cast<unsigned int>(ESP.getFreeHeap()), (int)esp_reset_reason());
   }
   delay(5);
 }

@@ -72,8 +72,11 @@ try {
     }
     $Before = Read-Fuses $BeforePath
     if (!$Before.UART_PRINT_CONTROL.readable) { throw 'UART_PRINT_CONTROL ei ole loetav.' }
-    if ([int]$Before.SPI_BOOT_CRYPT_CNT.value -ne 0 -or [bool]$Before.SECURE_BOOT_EN.value) { throw 'Seadmel on turvasatted. Skript ei kirjuta kaitstud kiipi ule.' }
-    $UartValue = [int]$Before.UART_PRINT_CONTROL.value
+    if ($Before.SPI_BOOT_CRYPT_CNT.value -ne 'Disable' -or [bool]$Before.SECURE_BOOT_EN.value) { throw 'Seadmel on turvasatted. Skript ei kirjuta kaitstud kiipi ule.' }
+    $UartModes = @{'Enable'=0; 'Enable when GPIO8 is low at reset'=1; 'Enable when GPIO8 is high at reset'=2; 'Disable'=3}
+    $UartText = [string]$Before.UART_PRINT_CONTROL.value
+    if (!$UartModes.ContainsKey($UartText)) { throw 'Tundmatu UART-print valjundi vorming.' }
+    $UartValue = $UartModes[$UartText]
     if ($UartValue -lt 0 -or $UartValue -gt 3) { throw 'Ootamatu UART_PRINT_CONTROL vaartus.' }
     if ($UartValue -ne 3 -and !$Before.UART_PRINT_CONTROL.writeable) { throw 'UART-print seade on kirjutuskaitsega; katkestatud.' }
     $BackupPath = "$Root\backups\H2-$Port-$Stamp.bin"
@@ -90,7 +93,7 @@ try {
         if ($LASTEXITCODE -ne 0) { throw 'eFuse samm ei loppenud. Hoia H2 eraldi. Uuesti kaivitamine loeb seisundi uuesti.' }
     }
     $After = Read-Fuses $AfterPath
-    if ([int]$After.UART_PRINT_CONTROL.value -ne 3) { throw 'ROM-i UART vaigistus ei ole kinnitatud.' }
+    if ($After.UART_PRINT_CONTROL.value -ne 'Disable') { throw 'ROM-i UART vaigistus ei ole kinnitatud.' }
     if ($Before.SPI_BOOT_CRYPT_CNT.value -ne $After.SPI_BOOT_CRYPT_CNT.value -or $Before.SECURE_BOOT_EN.value -ne $After.SECURE_BOOT_EN.value) { throw 'Turvasatte muutus; katkestatud.' }
     Write-Host 'VALMIS: pusivara kirjutatud ja kontrollitud; UART_PRINT_CONTROL=3 kontrollitud.' -ForegroundColor Green
     Write-Host "Vana flash: $BackupPath"
