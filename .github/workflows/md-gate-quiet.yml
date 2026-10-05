@@ -29,6 +29,11 @@ jobs:
                   path: |
                       firmware-quiet/build/MD-GATE-H2-USB.bin
                       firmware-quiet/build/build-manifest.json
+                      firmware-quiet/build/bootloader/bootloader.bin
+                      firmware-quiet/build/md_gate_h2.bin
+                      firmware-quiet/build/partition_table/partition-table.bin
+                      firmware-quiet/build/ota_data_initial.bin
+                      firmware-quiet/build/flasher_args.json
                       firmware-quiet/build/log/
                       firmware-quiet/sdkconfig
                       firmware-quiet/dependencies.lock

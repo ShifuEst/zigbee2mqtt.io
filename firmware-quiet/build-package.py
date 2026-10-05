@@ -2,8 +2,6 @@ from pathlib import Path
 import hashlib
 import json
 import os
-import subprocess
-import sys
 
 b = Path('build')
 cfg = Path('sdkconfig').read_text()
@@ -16,13 +14,24 @@ assert 'CONFIG_ESP_CONSOLE_UART_DEFAULT=y' not in cfg
 assert 'CONFIG_ESP_CONSOLE_UART_CUSTOM=y' not in cfg
 assert 'CONFIG_BOOT_ROM_LOG_ALWAYS_OFF=y' not in cfg, 'eFuse must only be changed with explicit user confirmation'
 args = json.loads((b / 'flasher_args.json').read_text())
-parts = []
-for address, file in args['flash_files'].items():
-    parts.extend([address, file])
-subprocess.run([sys.executable, '-m', 'esptool', '--chip', 'esp32h2', 'merge-bin',
-                '--output', 'MD-GATE-H2-USB.bin', '--pad-to-size', '4MB', *parts], cwd=b, check=True)
+# IDF has already generated image headers for the selected chip and flash.
+# Assemble those exact bytes without relying on esptool 4/5 CLI spelling.
+flash_size = 4194304
+image = bytearray(b'\xff' * flash_size)
+regions = []
+expected_offsets = {0x0, 0x8000, 0xe000, 0x10000}
+assert {int(x, 0) for x in args['flash_files']} == expected_offsets
+for address, filename in args['flash_files'].items():
+    start = int(address, 0)
+    data = (b / filename).read_bytes()
+    end = start + len(data)
+    assert data and 0 <= start < end <= flash_size, 'Invalid flash region'
+    assert all(end <= lo or start >= hi for lo, hi in regions), 'Overlapping flash regions'
+    regions.append((start, end))
+    image[start:end] = data
 binary = b / 'MD-GATE-H2-USB.bin'
-assert binary.stat().st_size == 4194304
+binary.write_bytes(image)
+assert binary.stat().st_size == flash_size
 manifest = {'version': '1.7.2-txrx01-USB', 'git_commit': os.environ.get('GITHUB_SHA'),
             'chip': 'esp32h2', 'flash_offset': '0x0', 'flash_size': 4194304,
             'sha256': hashlib.sha256(binary.read_bytes()).hexdigest(),
