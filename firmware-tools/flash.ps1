@@ -66,7 +66,7 @@ try {
     $BeforePath = "$Root\backups\H2-$Port-$Stamp-efuse-before.json"
     $AfterPath = "$Root\backups\H2-$Port-$Stamp-efuse-after.json"
     function Read-Fuses([string]$OutputPath) {
-        & $EspFuse --chip esp32h2 --port $Port summary --format json --file $OutputPath UART_PRINT_CONTROL SPI_BOOT_CRYPT_CNT SECURE_BOOT_EN | Out-Host
+        & $EspFuse --chip esp32h2 --port $Port summary --format json --file $OutputPath | Out-Host
         if ($LASTEXITCODE -ne 0 -or !(Test-Path $OutputPath)) { throw 'eFuse lugemine ebaonnestus.' }
         return (Get-Content $OutputPath -Raw | ConvertFrom-Json)
     }

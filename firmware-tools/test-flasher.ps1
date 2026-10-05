@@ -15,14 +15,14 @@ $Fuse = @(Get-ChildItem "$Root\tools\esptool-5.1.0" -Recurse -Filter espefuse.ex
 $State = "$Root\virtual-efuse.bin"
 $BeforePath = "$Root\virtual-before.json"
 $AfterPath = "$Root\virtual-after.json"
-& $Fuse --chip esp32h2 --virt --path-efuse-file $State summary --format json --file $BeforePath UART_PRINT_CONTROL SPI_BOOT_CRYPT_CNT SECURE_BOOT_EN
+& $Fuse --chip esp32h2 --virt --path-efuse-file $State summary --format json --file $BeforePath
 if ($LASTEXITCODE -ne 0) { throw 'Virtual summary failed' }
 $Before = Get-Content $BeforePath -Raw | ConvertFrom-Json
 if ([int]$Before.UART_PRINT_CONTROL.value -ne 0 -or !$Before.UART_PRINT_CONTROL.writeable) { throw 'Unexpected fresh virtual field' }
 # --do-not-confirm is used ONLY with --virt in this test, never in flash.ps1.
 & $Fuse --chip esp32h2 --virt --path-efuse-file $State --do-not-confirm burn-efuse UART_PRINT_CONTROL 3
 if ($LASTEXITCODE -ne 0) { throw 'Virtual burn failed' }
-& $Fuse --chip esp32h2 --virt --path-efuse-file $State summary --format json --file $AfterPath UART_PRINT_CONTROL SPI_BOOT_CRYPT_CNT SECURE_BOOT_EN
+& $Fuse --chip esp32h2 --virt --path-efuse-file $State summary --format json --file $AfterPath
 if ($LASTEXITCODE -ne 0) { throw 'Virtual readback failed' }
 $After = Get-Content $AfterPath -Raw | ConvertFrom-Json
 if ([int]$After.UART_PRINT_CONTROL.value -ne 3) { throw 'Virtual readback is not 3' }
